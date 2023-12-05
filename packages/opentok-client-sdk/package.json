@@ -1,0 +1,10 @@
+{
+  "name": "opentok-client-sdk",
+  "description": "OpentokSDK library on top of @opentok/client library",
+  "version": "0.0.1",
+  "dependencies": {
+    "@opentok/client": "^2.26.4",
+    "mic-check": "^1.1.0",
+    "typescript": "latest"
+  }
+}

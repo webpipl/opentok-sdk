@@ -1,4 +1,7 @@
 /** @type {import('next').NextConfig} */
-module.exports = {
-  transpilePackages: ["@repo/ui"],
+const nextConfig = {
+  transpilePackages: ["opentok-client-sdk"],
+  reactStrictMode: false,
 };
+
+module.exports = nextConfig;
