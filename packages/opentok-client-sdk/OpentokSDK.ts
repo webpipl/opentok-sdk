@@ -4,6 +4,7 @@ import { ConnectionStatus } from "./enums/connection-status";
 
 class OpentokClientSDK extends OpentokSession {
   capturedSnapshot: string | null | undefined;
+
   constructor() {
     super();
     this.capturedSnapshot = "";
