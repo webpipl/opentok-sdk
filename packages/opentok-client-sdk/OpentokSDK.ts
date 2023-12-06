@@ -54,12 +54,6 @@ class OpentokClientSDK extends OpentokSession {
   clearCapturedSnapshot = () => {
     this.capturedSnapshot = undefined;
   };
-  onConnectionEvent = (listener: (data: any) => void) => {
-    this.eventManager.on("connectionAdded", listener);
-  };
-  onSessionStatusUpdate = (listener: (data: any) => void) => {
-    this.eventManager.on("updateSessionConnectionStatus", listener);
-  };
 }
 
 export default OpentokClientSDK;

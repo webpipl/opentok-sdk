@@ -71,6 +71,8 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       setStatus(data);
     };
 
+    // opentok.setAbc = () => {};
+
     opentok.onStreamCreate = (key, stream) => {
       setStreams((prev) => {
         return new Map(prev.set(key, stream));

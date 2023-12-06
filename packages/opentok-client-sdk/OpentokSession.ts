@@ -1,89 +1,53 @@
 import OT, { Event } from "@opentok/client";
 import { ConnectionStatus, SignalPermission } from "./enums/connection-status";
-import { EventEmitter } from "events";
 import parseJSON from "./helpers/parseJSON";
 import IOpentokActionsListener, {
-  // IDevicePermissionStatusType,
   IJoinRequestType,
 } from "./IOpentokActionsListener";
-// import {
-//   MediaPermissionsError,
-//   requestMediaPermissions,
-//   MediaPermissionsErrorType,
-// } from "mic-check";
 import {
   IOpentokSessionType,
   IOpentokStreamType,
 } from "./types/ConnectionEvent";
-import OpentokPublisher from "./OpentokPublisher";
-import * as stream from "stream";
 import OpentokBase from "./OpentokBase";
-
-//  this.eventManager.emit("mutedDevices", { audio: isAudioEnabled });
-
 type PublisherType = "camera" | "screen";
 
 class OpentokSession extends OpentokBase implements IOpentokActionsListener {
-  session: IOpentokSessionType | undefined;
-  status: ConnectionStatus;
-  connections: Map<string | undefined, OT.Connection | undefined | null>;
+  session: IOpentokSessionType | undefined = undefined;
+  status: ConnectionStatus = ConnectionStatus.Idle;
+  connections: Map<string | undefined, OT.Connection | undefined | null> =
+    new Map<string, OT.Connection>();
   // eventManager: EventEmitter;
   publisher: {
     camera: OT.Publisher | null;
     screen: OT.Publisher | null;
-  };
-  streams: Map<string, IOpentokStreamType | undefined | null>;
-  counter: number | null;
+  } = { camera: null, screen: null };
+  streams: Map<string, IOpentokStreamType | undefined | null> = new Map<
+    string,
+    OT.Stream
+  >(null);
+  subscribers: Map<string, OT.Subscriber> = new Map<string, OT.Subscriber>();
+  joinRequests: Map<string, IJoinRequestType> = new Map<
+    string,
+    IJoinRequestType
+  >();
 
-  // audioDevices: OT.Device[];
-  // videoDevices: OT.Device[];
-  // devicePermissions: IDevicePermissionStatusType;
-  // devicePermissionError: MediaPermissionsError;
-
-  subscribers: Map<string, OT.Subscriber>;
-
-  joinRequests: Map<string, IJoinRequestType>;
-  joinRequestStatus: any;
-  disconnectTimer: any;
-  connectionCount: number;
-  DISCONNECT_ON_TIME: number;
-  // sessionsList: Map<string | undefined, OT.Session> | null;
-
+  disconnectTimer: any = null;
+  connectionCount: number = 0;
+  DISCONNECT_ON_TIME: number = 120000;
   constructor() {
     super();
-    this.session = undefined;
-    this.status = ConnectionStatus.Idle;
-    this.connections = new Map<string, OT.Connection>();
-    this.eventManager = new EventEmitter();
-
-    this.publisher = {
-      camera: null,
-      screen: null,
-    };
-
-    this.DISCONNECT_ON_TIME = 120000;
-    this.streams = new Map<string, OT.Stream>(null);
-    this.subscribeToStream = this.subscribeToStream.bind(this);
-    this.counter = null;
-
-    this.subscribers = new Map<string, OT.Subscriber>();
-    this.disconnectTimer = null;
-    this.connectionCount = 0;
-    // OT.setLogLevel(OT.ERROR);
-    OT.on("exception", (error: OT.ExceptionEvent) => {
-      console.log("Opentok exception:", error);
-    });
-    this.joinRequests = new Map<string, IJoinRequestType>();
-
-    // this.publisherManager = new OpentokPublisher(this.streams);
-    console.log("opentok-session class loaded");
   }
 
   intializeSession = (apiKey: string, sessionId: string) => {
     return OT.initSession(apiKey, sessionId);
   };
 
-  onStreamCreate = (key: string, stream: OT.Stream) => {};
+  onStreamCreate = (key: string, stream: OT.Stream) => {
+    // if(this.setAbc&&typeof this.Abc==="function"){
+    //   this.setAbc(key,stream)
+    // }
+  };
+
   onStreamDestroy = (key: string, stream: OT.Stream) => {};
   onSessionConnectionStatusChange = (data: any) => {};
   onConnection = (connections: any) => {};
@@ -583,37 +547,6 @@ class OpentokSession extends OpentokBase implements IOpentokActionsListener {
         onSent?.();
       }
     });
-  };
-
-  /**
-   *
-   * @param stream Stream object of actvily published media
-   * @param targetElement the element where your want display remote video
-   * @param properties
-   * @param callback
-   */
-  subscribeToStream = (
-    stream: OT.Stream,
-    targetElement?: string | HTMLElement | undefined,
-    properties?: OT.SubscriberProperties | undefined,
-    callback?: ((error?: OT.OTError | undefined) => void) | undefined
-  ) => {
-    this.session?.subscribe(
-      stream,
-      targetElement,
-      {
-        subscribeToAudio: true,
-        subscribeToVideo: true,
-        testNetwork: true,
-      },
-      (error: OT.OTError | undefined) => {
-        if (error) {
-          callback?.(error);
-        }
-
-        callback?.(undefined);
-      }
-    );
   };
 
   onNewJoinRequest = (key: string, data: IJoinRequestType) => {};
