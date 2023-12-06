@@ -21,9 +21,9 @@ class OpentokPublisher {
   devicePermissionError: MediaPermissionsError;
   session: IOpentokSessionType | null | undefined;
   streams: Map<string, IOpentokStreamType | undefined | null>;
+
   constructor(
-    session: IOpentokSessionType | undefined,
-    streams: Map<string, IOpentokStreamType | undefined | null>
+      streams: Map<string, IOpentokStreamType | undefined | null>
   ) {
     this.publisher = {
       camera: null,
@@ -151,13 +151,7 @@ class OpentokPublisher {
     stream.connection.data = parsedData;
 
     this.streams?.set(this.getStreamUniqueId(stream), event.stream);
-    // this.eventManager.emit("STREAM_UPDATED", this.streams);
-    // this.onStreamUpdate(this.streams);
-    // console.log(
-    //   "[PUBLISHER-STREAM-CREATED]",
-    //   `${stream.connection.connectionId}-${stream.videoType}`,
-    //   stream
-    // );
+
     this.onStreamCreate(this.getStreamUniqueId(stream), stream);
 
     this.raisePublisherChangedEvent();

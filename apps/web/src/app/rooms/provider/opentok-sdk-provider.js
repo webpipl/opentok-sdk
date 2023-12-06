@@ -1,32 +1,8 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import OpentokSDKContext from "./opentok-sdk-context";
 import { JOIN_REQUEST_STATUS } from "../[room]/constants";
-const { OpentokClientSDK } = require("opentok-client-sdk");
-
-const withOpentokHOC = (Component) => {
-  return (props) => {
-    const [opentok, setOpentok] = useState(null);
-    const opentokRef = useRef(null);
-    useEffect(() => {
-      if (opentok === null) {
-        let instance = new OpentokClientSDK();
-        setOpentok(instance);
-        opentokRef.current = instance;
-      }
-    }, []);
-    useEffect(() => {
-      return () => {
-        if (opentokRef.current) {
-          opentokRef.current?.disconnect();
-        }
-      };
-    }, []);
-    if (!opentok) return;
-    return <Component children={props.children} opentok={opentok} />;
-  };
-};
-
+import withOpentokHOC from "@/hoc/with-opentok-hoc";
 const OpenttokSDKProvider = ({ children, opentok }) => {
   const [connections, setConnections] = useState();
   const [status, setStatus] = useState(opentok?.status);
@@ -116,11 +92,13 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       setPublisher(data);
     };
     opentok.onDevicePermissionCheck = (error, permissionStatus) => {
+      console.log("permission status:", error, permissionStatus);
       if (error) {
         setDevicePermissionError(error);
         console.log("Permission Listening:", error);
         return;
       }
+
       setDevicePermissionStatus(permissionStatus);
     };
     opentok.onShowParticipantRequestingPanle = (isReadyToAsk) => {
@@ -184,6 +162,15 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       });
     }
   }, []);
+  const someOneSharedScreen = useMemo(
+    () =>
+      [...streams]?.some(
+        ([key, stream]) =>
+          stream?.connection?.id !== session?.connection?.id &&
+          stream?.videoType === "screen"
+      ),
+    [streams, session]
+  );
   return (
     <OpentokSDKContext.Provider
       value={{
@@ -206,6 +193,7 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
         requests,
         onRespondToJoinRequest,
         isHostJoined,
+        someOneSharedScreen,
       }}
     >
       {devicePermissionError?.name ? (

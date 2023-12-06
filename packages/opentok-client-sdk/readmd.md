@@ -12,3 +12,27 @@ u2="{\"name\":\"Sandeep\",\"role\":\"host\",\"id\":2}"
 Time Left
 
 {((getTimeNum(this.props.location.selectedVideoTraining.endTime) - (this.state.time))/(1000 \* 60)).toFixed()}
+
+Proctor:
+"{\"name\":\"Jalagam kalyan\",\"role\":\"proctor\",\"id\":3}"
+
+Errors:
+
+Warnings:
+OpenTok:NativeVideoElementWrapper:2:warn Video element paused, auto-resuming. If you intended to do this, use publishVideo(false) or subscribeToVideo(false) instead. +0ms
+
+Got this error some time only unable to access camera
+{
+"type": "CouldNotStartVideoSource",
+"name": "NotReadableError",
+"message": "Could not start video source"
+}
+
+Getting this error while subscribing if any stream get destroyed
+
+app-index.js:31 OpenTok:Session:error OT_STREAM_DESTROYED: Stream was destroyed before it could be subscribed to +0ms
+window.console.error @ app-index.js:31
+console.error @ hydration-error-info.js:45
+overrideMethod @ console.js:213
+debug @ opentok.js:71285
+dispatchOTError @ opentok.js:63404

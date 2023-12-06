@@ -1,50 +1,38 @@
 "use client";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/ui/popover";
+import Link from "next/link";
 
-const Rooms = () => {
-  const data = new Map([
-    ["1", { data: "jagadhissh" }],
-    ["2", { data: "Lakshmi" }],
-    ["3", { data: "Chandrika" }],
-  ]);
+const Page = () => {
   return (
-    <div className=" p-8">
-      <Popover>
-        <PopoverTrigger className=" relative bg-blue-800 text-white px-4 py-2 rounded-xl">
-          Waiting Room{" "}
-        </PopoverTrigger>
-        <PopoverContent>
-          <h3 className=" border-b  text-gray-500 pb-2 mb-2">
-            Waiting request
-          </h3>
-          <div className="">
-            <ul>
-              {Array.from(data).map(([key, value]) => {
-                return (
-                  <li
-                    className="  justify-between items-center flex flex-row py-1 px-2 rounded-lg cursor-pointer capitalize hover:bg-muted "
-                    id={key}
-                  >
-                    {value.data}
-
-                    <div className="gap-2 flex flex-row justify-between items-center">
-                      <button className=" text-xs bg-blue-400 hover:bg-blue-500 text-white px-2.5 py-1 rounded-full">
-                        Allow
-                      </button>
-                      <button className="text-xs bg-slate-100 hover:bg-blue-200 text-black px-2.5 py-1 rounded-full">
-                        Deny
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </PopoverContent>
-      </Popover>
+    <div className=" w-full bg-slate-50 h-screen flex justify-center items-center">
+      <section className=" p-4 bg-white w-6/12 h-2/6">
+        <div className=" flex flex-row gap-3">
+          <Link
+            className=" bg-blue-500 hover:bg-opacity-80 rounded-full px-4 py-2   text-white "
+            href="/rooms/1"
+            target="_blank"
+          >
+            Join as HOST
+          </Link>
+          <Link
+            className="  bg-green-500 hover:bg-opacity-80 rounded-full px-4 py-2   text-white "
+            href="/rooms/2"
+            target="_blank"
+          >
+            Join as Participant
+          </Link>
+          <Link
+            className="  bg-slate-800 hover:bg-opacity-80 rounded-full px-4 py-2   text-white "
+            href="/proctor"
+            target="_blank"
+          >
+            Monitor Session
+          </Link>
+        </div>
+      </section>
     </div>
   );
 };
 
-export default Rooms;
+export default Page;

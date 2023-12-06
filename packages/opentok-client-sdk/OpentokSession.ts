@@ -3,30 +3,31 @@ import { ConnectionStatus, SignalPermission } from "./enums/connection-status";
 import { EventEmitter } from "events";
 import parseJSON from "./helpers/parseJSON";
 import IOpentokActionsListener, {
-  IDevicePermissionStatusType,
+  // IDevicePermissionStatusType,
   IJoinRequestType,
 } from "./IOpentokActionsListener";
-import {
-  MediaPermissionsError,
-  requestMediaPermissions,
-  MediaPermissionsErrorType,
-} from "mic-check";
+// import {
+//   MediaPermissionsError,
+//   requestMediaPermissions,
+//   MediaPermissionsErrorType,
+// } from "mic-check";
 import {
   IOpentokSessionType,
   IOpentokStreamType,
 } from "./types/ConnectionEvent";
 import OpentokPublisher from "./OpentokPublisher";
 import * as stream from "stream";
+import OpentokBase from "./OpentokBase";
 
 //  this.eventManager.emit("mutedDevices", { audio: isAudioEnabled });
 
 type PublisherType = "camera" | "screen";
 
-class OpentokSession implements IOpentokActionsListener {
+class OpentokSession extends OpentokBase implements IOpentokActionsListener {
   session: IOpentokSessionType | undefined;
   status: ConnectionStatus;
   connections: Map<string | undefined, OT.Connection | undefined | null>;
-  eventManager: EventEmitter;
+  // eventManager: EventEmitter;
   publisher: {
     camera: OT.Publisher | null;
     screen: OT.Publisher | null;
@@ -34,10 +35,10 @@ class OpentokSession implements IOpentokActionsListener {
   streams: Map<string, IOpentokStreamType | undefined | null>;
   counter: number | null;
 
-  audioDevices: OT.Device[];
-  videoDevices: OT.Device[];
-  devicePermissions: IDevicePermissionStatusType;
-  devicePermissionError: MediaPermissionsError;
+  // audioDevices: OT.Device[];
+  // videoDevices: OT.Device[];
+  // devicePermissions: IDevicePermissionStatusType;
+  // devicePermissionError: MediaPermissionsError;
 
   subscribers: Map<string, OT.Subscriber>;
 
@@ -46,33 +47,25 @@ class OpentokSession implements IOpentokActionsListener {
   disconnectTimer: any;
   connectionCount: number;
   DISCONNECT_ON_TIME: number;
-  publisherManager: OpentokPublisher;
   // sessionsList: Map<string | undefined, OT.Session> | null;
 
   constructor() {
+    super();
     this.session = undefined;
     this.status = ConnectionStatus.Idle;
-    this.getAvailableDevices();
     this.connections = new Map<string, OT.Connection>();
     this.eventManager = new EventEmitter();
-    this.audioDevices = [];
-    this.videoDevices = [];
+
     this.publisher = {
       camera: null,
       screen: null,
     };
+
     this.DISCONNECT_ON_TIME = 120000;
     this.streams = new Map<string, OT.Stream>(null);
     this.subscribeToStream = this.subscribeToStream.bind(this);
     this.counter = null;
-    this.devicePermissions = { mic: false, video: false };
-    this.checkPermissions();
-    this.devicePermissionError = {
-      name: "",
-      type: undefined,
-      message: "",
-    };
-    this.observePermissions();
+
     this.subscribers = new Map<string, OT.Subscriber>();
     this.disconnectTimer = null;
     this.connectionCount = 0;
@@ -82,10 +75,9 @@ class OpentokSession implements IOpentokActionsListener {
     });
     this.joinRequests = new Map<string, IJoinRequestType>();
 
-    this.publisherManager = new OpentokPublisher(this.session, this.streams);
+    // this.publisherManager = new OpentokPublisher(this.streams);
     console.log("opentok-session class loaded");
   }
-
 
   intializeSession = (apiKey: string, sessionId: string) => {
     return OT.initSession(apiKey, sessionId);
@@ -624,96 +616,6 @@ class OpentokSession implements IOpentokActionsListener {
     );
   };
 
-  getDevicesWithPromise = (): Promise<{
-    audio: OT.Device[];
-    video: OT.Device[];
-  }> => {
-    return new Promise((resolve, reject) => {
-      OT.getDevices((error: OT.OTError | undefined, devices?: OT.Device[]) => {
-        if (error) {
-          reject(error);
-          return error;
-        }
-        if (devices) {
-          const audioDevices = devices?.filter(
-            (device: OT.Device) => device.kind == "audioInput"
-          );
-
-          const videoDevices = devices?.filter(
-            (device: OT.Device) => device.kind == "audioInput"
-          );
-          resolve({ audio: audioDevices, video: videoDevices });
-        }
-      });
-    });
-  };
-
-  getAvailableDevices = () => {
-    this.getDevicesWithPromise().then(({ audio, video }) => {
-      this.audioDevices = audio;
-      this.videoDevices = video;
-      // console.log({ audio, video });
-    });
-  };
-
-  onDevicePermissionCheck = (
-    error?: MediaPermissionsError | undefined,
-    status?: IDevicePermissionStatusType
-  ) => {};
-
-  observePermissions = () => {};
-  checkPermissions = () => {
-    requestMediaPermissions()
-      .then(() => {
-        this.devicePermissions = {
-          mic: true,
-          video: true,
-        };
-        this.onDevicePermissionCheck(undefined, this.devicePermissions);
-      })
-      .catch((error: MediaPermissionsError) => {
-        switch (error.type) {
-          case MediaPermissionsErrorType.SystemPermissionDenied:
-            // user denied permission
-            // setShowDialog(DialogType.systemDenied);
-            console.log("Permission:SystemPermissionDenied", error);
-            this.devicePermissionError = error;
-            break;
-          case MediaPermissionsErrorType.UserPermissionDenied:
-            console.log("Permission:UserPermissionDenied", error);
-            this.devicePermissionError = error;
-            // browser doesn't have access to devices
-            // setShowDialog(DialogType.userDenied);
-            break;
-          case MediaPermissionsErrorType.CouldNotStartVideoSource:
-            console.log("Permission:CouldNotStartVideoSource", error);
-            this.devicePermissionError = error;
-            // most likely when other apps or tabs are using the cam/mic (mostly windows)
-            // setShowDialog(DialogType.trackError);
-            break;
-
-          default:
-            console.log("Permission:default", error);
-
-            break;
-        }
-
-        this.onDevicePermissionCheck(error);
-        // setErrorDetails(error);
-      });
-
-    // setTimeout(() => {
-    //   checkForExplanationDialog();
-    // }, 500);
-  };
-
-  // getHost = () => {
-  //   const hostDetails = Array.from(this.connections.values()).find(item=>{
-  //     const data=JSON.parse(JSON.parse(item?.data))
-  //     console.log(item?.data)
-
-  //   });
-  // };
   onNewJoinRequest = (key: string, data: IJoinRequestType) => {};
   onParticipantReceivesHostResponse = (data: IJoinRequestType) => {};
   listToJoiSignals = () => {

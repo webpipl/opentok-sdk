@@ -15,7 +15,7 @@ const u1Token =
 const u2Token =
   "T1==cGFydG5lcl9pZD00NzY1OTY2MSZzaWc9MzgxOWJkNTBiOTQwNTMyMTI4OGRhZmJkMGE4Y2JlMTZhODFhODEzMDpzZXNzaW9uX2lkPTFfTVg0ME56WTFPVFkyTVg1LU1UY3dNRGN6TURVME5EazFObjVxVjNoVFprZFhOVzUzV1hkSk1EaDBTME5MTTNkUlFXeC1mbjQmY3JlYXRlX3RpbWU9MTcwMTIyNjY2NyZub25jZT0wLjcyOTg5MjA3NTAzNDkyMjcmcm9sZT1wdWJsaXNoZXImZXhwaXJlX3RpbWU9MTcwMzgxODY2NyZjb25uZWN0aW9uX2RhdGE9JTIyJTdCJTVDJTIybmFtZSU1QyUyMiUzQSU1QyUyMkphZ2FkaGlzc2glNUMlMjIlMkMlNUMlMjJyb2xlJTVDJTIyJTNBJTVDJTIycGFydGljaXBhbnQlNUMlMjIlMkMlNUMlMjJpZCU1QyUyMiUzQTIlN0QlMjImaW5pdGlhbF9sYXlvdXRfY2xhc3NfbGlzdD0=";
 const proctorToken =
-  "T1==cGFydG5lcl9pZD00NzY1OTY2MSZzaWc9NmYxNmU3MzJlN2Y4NzY0ZDA5ZWFiYWFiYmMzNDEzNTA0ZjNkYWU5YTpzZXNzaW9uX2lkPTFfTVg0ME56WTFPVFkyTVg1LU1UY3dNRGN6TURVME5EazFObjVxVjNoVFprZFhOVzUzV1hkSk1EaDBTME5MTTNkUlFXeC1mbjQmY3JlYXRlX3RpbWU9MTcwMTQxNTAxMSZub25jZT0wLjAwNTk3NjU3NzUwNTMyNDg3NiZyb2xlPXN1YnNjcmliZXImZXhwaXJlX3RpbWU9MTcwNDAwNzAwOCZjb25uZWN0aW9uX2RhdGE9JTIyJTdCJTVDJTIybmFtZSU1QyUyMiUzQSU1QyUyMkthbHlhbiU1QyUyMiUyQyU1QyUyMnJvbGUlNUNwcm9jdG9yJTIyJTNBJTVDJTIyJTVDJTIyJTJDJTVDJTIyaWQlNUMlMjIlM0EzJTdEJTIyJmluaXRpYWxfbGF5b3V0X2NsYXNzX2xpc3Q9";
+  "T1==cGFydG5lcl9pZD00NzY1OTY2MSZzaWc9OWNjNzNjY2FlNjM5YTAyZjcyYjNiYmQyZTE5ODk2YmU3ZGUwY2JmNzpzZXNzaW9uX2lkPTFfTVg0ME56WTFPVFkyTVg1LU1UY3dNRGN6TURVME5EazFObjVxVjNoVFprZFhOVzUzV1hkSk1EaDBTME5MTTNkUlFXeC1mbjQmY3JlYXRlX3RpbWU9MTcwMTgyMzU4OSZub25jZT0wLjUxODIzMDM0NzQyNzU3Mjcmcm9sZT1zdWJzY3JpYmVyJmV4cGlyZV90aW1lPTE3MDQ0MTU1ODcmY29ubmVjdGlvbl9kYXRhPSUyMiU3QiU1QyUyMm5hbWUlNUMlMjIlM0ElNUMlMjJKYWxhZ2FtJTIwa2FseWFuJTVDJTIyJTJDJTVDJTIycm9sZSU1QyUyMiUzQSU1QyUyMnByb2N0b3IlNUMlMjIlMkMlNUMlMjJpZCU1QyUyMiUzQTMlN0QlMjImaW5pdGlhbF9sYXlvdXRfY2xhc3NfbGlzdD0=";
 const Room = () => {
   const {
     opentok,
@@ -35,6 +35,7 @@ const Room = () => {
     joinRequestStatus,
     requests,
     isHostJoined,
+    someOneSharedScreen,
   } = useOpentokSdk();
   const [state, setState] = useState(opentok.session);
   const params = useParams();
@@ -62,7 +63,9 @@ const Room = () => {
   useEffect(() => {
     //stream hooks
     //create new hook
-  }, [streams]);
+
+    console.log(session);
+  }, [session]);
 
   const remoteVideos = useMemo(() => [...streams.values()]);
   return (
@@ -85,7 +88,7 @@ const Room = () => {
               </div>
             )}
           </div>
-          <section className=" h-screen w-full flex flex-row flex-wrap">
+          <section className="w-full flex flex-row flex-wrap">
             {shouldShowPermissionRequestStrip ? (
               joinRequestStatus === JOIN_REQUEST_STATUS.Idle ? (
                 <div className="flex flex-row shadow-sm border rounded-sm items-center h-20 w-full justify-between">
@@ -116,13 +119,17 @@ const Room = () => {
                   <section id="remote-videos">
                     <div id="camera" className="w-60 h-60"></div>
                   </section>
-                  {[...streams]?.map(([key, mainStream], idx) => (
-                    <RemoteVideo id={key} stream={mainStream} key={idx} />
-                  ))}
-                  <div className=" w-44 h-44 overflow-hidden">
+                  {[...streams]?.map(([key, mainStream], idx) =>
+                    mainStream?.me ? null : (
+                      <RemoteVideo id={key} stream={mainStream} key={idx} />
+                    )
+                  )}
+                  <div className=" w-60 h-60 overflow-hidden">
                     <div
                       id="screen"
-                      className={`${!publisher?.screen && "hidden"} `}
+                      className={` ${publisher?.screen ? "w-60 h-60" : ""} ${
+                        !publisher?.screen && "hidden"
+                      } `}
                     ></div>
                   </div>
                 </>
@@ -130,8 +137,8 @@ const Room = () => {
             )}
           </section>
 
-          <div className=" flex gap-2 mb-3">
-            <JoinRequests />
+          <div className=" flex gap-2 mb-3 mt-3">
+            {!isParticipant && <JoinRequests />}
             <button
               onClick={snapshot ? clearCaptureSnapshot : handleCaptureSnapshot}
               className=" bg-teal-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
@@ -156,14 +163,20 @@ const Room = () => {
             >
               Disconnect
             </button>
-            <button
+            {/* <button
               onClick={opentok.unpublish}
               className=" bg-red-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
             >
               Un Publish Camera
-            </button>
+            </button> */}
             <button
-              onClick={opentok.shareScreen}
+              onClick={
+                someOneSharedScreen
+                  ? () => {
+                      alert("Someone already sharing their screen");
+                    }
+                  : opentok.shareScreen
+              }
               className=" bg-blue-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
             >
               {publisher?.screen ? "Stop sharing" : "Screen Share"}
