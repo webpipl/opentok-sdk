@@ -36,3 +36,13 @@ console.error @ hydration-error-info.js:45
 overrideMethod @ console.js:213
 debug @ opentok.js:71285
 dispatchOTError @ opentok.js:63404
+
+{
+"code": 1500,
+"message": "Session.publish :: Could not publish in a reasonable amount of time",
+"name": "OT_TIMEOUT",
+"stack": "Error: Could not publish in a reasonable amount of time\n at onPublishingTimeout (webpack-internal:///(app-pages-browser)/../../node_modules/@opentok/client/dist/js/opentok.js:17295:58)\n at eval (webpack-internal:///(app-pages-browser)/../../node_modules/@opentok/client/dist/js/opentok.js:20227:13)"
+}
+
+Unhandled Runtime Error
+OT_UNABLE_TO_SUBSCRIBE: Subscribe: Subscriber PeerConnection with connection (not found) failed: Tried to subscribe to a stream while disconnected.

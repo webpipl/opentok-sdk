@@ -1,0 +1,2 @@
+export const ASK_TO_JOIN = "ASK_TO_JOIN";
+export const REPOND_TO_JOIN_REQUEST = "REPOND_TO_JOIN_REQUEST";

@@ -53,19 +53,15 @@ const Room = () => {
   }, [params, status]);
   //
   useEffect(() => {
+    // console.log("isHost", status, isHost);
     if (status === SESSION_STATUS.CONNECTED && isHost) {
       opentok.publish();
     }
   }, [status, isHost]);
 
-  const handleClick = () => {};
-
   useEffect(() => {
-    //stream hooks
-    //create new hook
-
-    console.log(session);
-  }, [session]);
+    // console.log("status: ", status);
+  }, [status]);
 
   const remoteVideos = useMemo(() => [...streams.values()]);
   return (
@@ -136,7 +132,6 @@ const Room = () => {
               )
             )}
           </section>
-
           <div className=" flex gap-2 mb-3 mt-3">
             {!isParticipant && <JoinRequests />}
             <button
@@ -146,13 +141,13 @@ const Room = () => {
               {snapshot ? "Clear snap" : "Capture snapshot"}
             </button>
             <button
-              onClick={opentok.toggleAudioMute}
+              onClick={opentok.toggleAudio}
               className=" bg-teal-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
             >
               {muted.audio ? "Un mute Audio" : "Mute Audio"}
             </button>
             <button
-              onClick={opentok.toggleVideoMute}
+              onClick={opentok.toggleVideo}
               className=" bg-teal-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
             >
               {muted.audio ? "Un mute video" : "Mute Video"}
@@ -163,12 +158,7 @@ const Room = () => {
             >
               Disconnect
             </button>
-            {/* <button
-              onClick={opentok.unpublish}
-              className=" bg-red-700 text-white text-sm shadow-lg font-medium px-4 py-2 rounded-xl"
-            >
-              Un Publish Camera
-            </button> */}
+
             <button
               onClick={
                 someOneSharedScreen

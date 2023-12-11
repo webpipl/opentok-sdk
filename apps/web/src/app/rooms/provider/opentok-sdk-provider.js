@@ -1,18 +1,22 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import OpentokSDKContext from "./opentok-sdk-context";
 import { JOIN_REQUEST_STATUS } from "../[room]/constants";
 import withOpentokHOC from "@/hoc/with-opentok-hoc";
-const OpenttokSDKProvider = ({ children, opentok }) => {
-  const [connections, setConnections] = useState();
-  const [status, setStatus] = useState(opentok?.status);
-  const [streams, setStreams] = useState(opentok?.streams);
-  const [session, setSession] = useState(opentok?.session);
+export const DISCONNECT_SESSION_AT = 120000;
+
+function OpenttokSDKProvider({ children, opentok }) {
+  const [connections, setConnections] = useState(
+    opentok?.sessionManager?.getConnections()
+  );
+  const [status, setStatus] = useState(opentok?.sessionManager?.status);
+  const [streams, setStreams] = useState(opentok?.sessionManager?.streams);
+  const [session, setSession] = useState(opentok?.sessionManager?.session);
   const [muted, setMuted] = useState({ audio: false, video: false });
   const [snapshot, setSnapshot] = useState(undefined);
   const [publisher, setPublisher] = useState({
-    camera: opentok.publisher.camera,
-    screen: opentok?.publisher.screen,
+    camera: opentok.publishManager?.publisher.camera,
+    screen: opentok?.publishManager?.publisher.screen,
   });
   const [showPermissionRequestStrip, setPermissionRequestStrip] =
     useState(undefined);
@@ -21,11 +25,6 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
     JOIN_REQUEST_STATUS.Idle
   );
 
-  useEffect(() => {
-    // console.log("iam cosjsjs yes  cncjjfjjf");
-    // console.log("no connectus")
-    // console.log("no connectus")
-  }, []);
   const isHostJoined = useMemo(() => {
     const hostExists = session?.connections?.find((connection) => {
       const data =
@@ -46,7 +45,8 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
 
   const [isHost, setIsHost] = useState(false);
   const [isParticipant, setIsParticipant] = useState(false);
-  const [requests, setRequests] = useState(opentok.joinRequests);
+  const [requests, setRequests] = useState(opentok.sessionManager.joinRequests);
+  const disconnectTimer = useRef(null);
   useEffect(() => {
     if (session) {
       const data = session?.connection?.data;
@@ -55,30 +55,64 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       }
     }
   }, [session]);
-  useEffect(() => {}, [isHost]);
+
+  const monitorSessionForInactivityToDisconnect = useCallback(
+    (connectionList) => {
+      if (connectionList.size < 2) {
+        if (disconnectTimer.current) clearTimeout(disconnectTimer.current);
+        disconnectTimer.current = setTimeout(
+          () => opentok.disconnect(),
+          DISCONNECT_SESSION_AT
+        );
+      } else {
+        if (disconnectTimer.current) {
+          clearTimeout(disconnectTimer.current);
+          disconnectTimer.current = null;
+        }
+      }
+    },
+    [opentok]
+  );
 
   useEffect(() => {
-    opentok.onMute = (stateKey, stateNewValue) => {
+    opentok.muteCallback = (stateKey, stateNewValue) => {
       setMuted((prev) => ({
         ...prev,
         [stateKey]: stateNewValue,
       }));
     };
-    opentok.onConnection = (data) => {
-      setSession(opentok?.session);
+
+    opentok.sessionManager.callbacks.myCustomCallback = (data) => {
+      console.log("calllback methods called");
     };
-    opentok.onSessionConnectionStatusChange = (data) => {
+    opentok.callbacks.sessionConnectedCallback = (data) => {
+      setSession(data);
+    };
+
+    opentok.callbacks.sessionDisConnectedCallback = () => {
+      setSession(undefined);
+    };
+
+    opentok.callbacks.addConnectionCallback = (data) => {
+      setConnections(new Map(data));
+      monitorSessionForInactivityToDisconnect(data);
+    };
+    opentok.callbacks.removeConnectionCallback = (data) => {
+      setConnections(new Map(data));
+      monitorSessionForInactivityToDisconnect(data);
+    };
+
+    opentok.callbacks.listenSessionStatus = (data) => {
       setStatus(data);
     };
 
-    // opentok.setAbc = () => {};
-
-    opentok.onStreamCreate = (key, stream) => {
+    opentok.callbacks.addStreamCallback = (key, stream) => {
       setStreams((prev) => {
         return new Map(prev.set(key, stream));
       });
     };
-    opentok.onStreamDestroy = (key, stream) => {
+
+    opentok.callbacks.removeStreamCallback = (key, stream) => {
       setStreams((prev) => {
         const streamsData = new Map(prev);
         streamsData.delete(key);
@@ -86,45 +120,40 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       });
     };
 
-    // opentok.onWaitingRoomShouldWait((data) => {
-    //   setShouldWaitOnLobby(data?.value);
-    // });
-
-    opentok.onPublisherChanges = (data) => {
+    opentok.callbacks.onPublishCompletedCallback = (data) => {
       setPublisher(data);
     };
+
     opentok.onDevicePermissionCheck = (error, permissionStatus) => {
-      console.log("permission status:", error, permissionStatus);
       if (error) {
         setDevicePermissionError(error);
-        console.log("Permission Listening:", error);
         return;
       }
-
       setDevicePermissionStatus(permissionStatus);
     };
-    opentok.onShowParticipantRequestingPanle = (isReadyToAsk) => {
+
+    opentok.callbacks.onShowLobby = (isReadyToAsk) => {
       setPermissionRequestStrip(isReadyToAsk);
       setIsParticipant(true);
     };
-    opentok.onNewJoinRequest = (key, request) => {
+
+    opentok.callbacks.addJoinRquestCallback = (key, request) => {
       console.log("new requests:", request);
       setRequests((prev) => {
         return new Map(prev.set(key, request));
       });
     };
 
-    opentok.onParticipantReceivesHostResponse = (data) => {
+    opentok.callbacks.participantsReceiveResponseFromHostCallback = (data) => {
       setJoinRequestStatus(JOIN_REQUEST_STATUS[data?.data]);
       setTimeout(() => {
         if (data?.data === JOIN_REQUEST_STATUS.Granted) {
+          // opentok.sessionManager.publish();
           opentok.publish();
         }
       }, 1000);
     };
   }, []);
-
-  const onSubscribe = () => {};
 
   const handleCaptureSnapshot = () => {
     opentok.captureSnapshot().then((res) => {
@@ -144,9 +173,8 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
   }, [isParticipant, showPermissionRequestStrip, joinRequestStatus]);
   const sendJoinRequestToHost = () => {
     opentok
-      .sendRequestToHost()
+      .askToJoin()
       .then((res) => {
-        console.log("reuest sent");
         setJoinRequestStatus(JOIN_REQUEST_STATUS.RequestSent);
       })
       .catch(() => {
@@ -155,7 +183,7 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
   };
 
   const onRespondToJoinRequest = useCallback((permission, data) => {
-    opentok.onRespondToJoinRequest(permission, data);
+    opentok.respondToJoinRequest(permission, data);
     if (permission === JOIN_REQUEST_STATUS.Granted) {
       setRequests((prevRequests) => {
         const copy = new Map(prevRequests);
@@ -181,7 +209,6 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
         status: status,
         streams: streams,
         session: session,
-        onSubscribe: onSubscribe,
         muted,
         handleCaptureSnapshot,
         clearCaptureSnapshot,
@@ -212,6 +239,6 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
       )}
     </OpentokSDKContext.Provider>
   );
-};
+}
 
 export default withOpentokHOC(OpenttokSDKProvider);
