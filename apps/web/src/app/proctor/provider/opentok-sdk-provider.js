@@ -4,17 +4,12 @@ import OpentokSDKContext from "./opentok-sdk-context";
 import withOpentokHOC from "@/hoc/with-opentok-hoc";
 const OpenttokSDKProvider = ({ children, opentok }) => {
   const [connections, setConnections] = useState();
-  const [status, setStatus] = useState(opentok?.status);
-  const [streams, setStreams] = useState(opentok?.streams);
-  const [session, setSession] = useState(opentok?.session);
+  const [status, setStatus] = useState(opentok?.getStatus());
+  const [streams, setStreams] = useState(opentok?.getStreams());
+  const [session, setSession] = useState(opentok.getSession());
   const [muted, setMuted] = useState({ audio: false, video: false });
   const [snapshot, setSnapshot] = useState(undefined);
 
-  useEffect(() => {
-    // console.log("iam cosjsjs yes  cncjjfjjf");
-    // console.log("no connectus")
-    // console.log("no connectus")
-  }, []);
   const isHostJoined = useMemo(() => {
     const hostExists = session?.connections?.find((connection) => {
       const data =
@@ -40,31 +35,44 @@ const OpenttokSDKProvider = ({ children, opentok }) => {
   useEffect(() => {}, [isHost]);
 
   useEffect(() => {
-    opentok.onMute = (stateKey, stateNewValue) => {
+    opentok.muteCallback = (stateKey, stateNewValue) => {
       setMuted((prev) => ({
         ...prev,
         [stateKey]: stateNewValue,
       }));
     };
-    opentok.onConnection = (data) => {
-      setSession(opentok?.session);
-    };
-    opentok.onSessionConnectionStatusChange = (data) => {
-      setStatus(data);
+
+    opentok.callbacks.sessionConnectedCallback = (data) => {
+      console.log("session connected");
+      setSession(data);
     };
 
-    opentok.onStreamCreate = (key, stream) => {
+    opentok.callbacks.sessionDisConnectedCallback = () => {
+      setSession(undefined);
+    };
+    opentok.callbacks.listenSessionStatus = (data) => {
+      setStatus(data);
+    };
+    opentok.callbacks.addStreamCallback = (key, stream) => {
       setStreams((prev) => {
         return new Map(prev.set(key, stream));
       });
     };
-    opentok.onStreamDestroy = (key, stream) => {
+
+    opentok.callbacks.removeStreamCallback = (key, stream) => {
       setStreams((prev) => {
         const streamsData = new Map(prev);
         streamsData.delete(key);
         return streamsData;
       });
     };
+    opentok.callbacks.throwError = (errorData) => {
+      if (errorData?.name === "OT_AUTHENTICATION_ERROR") {
+        setStatus("failed");
+      }
+    };
+    opentok.callbacks.recordingStarted = (event) => {};
+    opentok.callbacks.recordingStopped = (event) => {};
   }, []);
 
   const onSubscribe = () => {};

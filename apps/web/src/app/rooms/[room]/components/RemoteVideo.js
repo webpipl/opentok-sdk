@@ -12,12 +12,13 @@ const RemoteVideo = ({ id, stream }) => {
     // if (!isSubscribingRef.current) {
     //   isSubscribingRef.current = true;
 
-    opentok.sessionManager.subscribe(
-      stream,
-      videoRef.current,
-      {},
-      `${id}-subscriber`
-    );
+    opentok.subscribe(stream, videoRef.current, {}, `${id}-subscriber`);
+    // opentok.sessionManager.subscribe(
+    //   stream,
+    //   videoRef.current,
+    //   {},
+    //   `${id}-subscriber`
+    // );
     // subscriptionRef.current = opentok.current.session.subscribe(
     //   stream,
     //   videoRef.current,

@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["opentok-client-sdk"],
+  transpilePackages: ["remote-meet-sdk"],
   reactStrictMode: false,
 };
 

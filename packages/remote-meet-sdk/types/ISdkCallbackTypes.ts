@@ -36,5 +36,16 @@ interface ISDKCallbacks {
     screen: OT.Publisher | null;
   }) => void;
   muteCallback?: (video: string, isVideoEnabled: undefined | boolean) => void;
+  throwError?: (error: OT.OTError) => void;
+  recordingStarted?: (
+    event: OT.Event<"archiveStarted", OT.Session> & { id: string; name: string }
+  ) => void;
+  recordingStopped?: (
+    event: OT.Event<"archiveStopped", OT.Session> & { id: string; name: string }
+  ) => void;
+  audioLevelUpdate?: (value: any) => void;
+  publisherElementRemoved?: (
+    event: OT.Event<"destroyed", OT.Publisher>
+  ) => void;
 }
 export default ISDKCallbacks;

@@ -1,4 +1,3 @@
-import SignalManager from "./SignalsManager";
 import { SESSION_EVENTS_NAMES } from "./constants/events-names";
 import { ConnectionStatus } from "./enums/connection-status";
 import parseJSON from "./helpers/parseJSON";
@@ -30,6 +29,8 @@ class Session {
     this.session?.on("sessionReconnected", this.sessionReconnected);
     this.session?.on("streamCreated", this.sessionStreamCreated);
     this.session?.on("streamDestroyed", this.sessionStreamDestroyed);
+    this.session?.on("archiveStarted", this.archiveStarted);
+    this.session?.on("archiveStopped", this.archiveStopped);
   };
 
   /**
@@ -90,6 +91,25 @@ class Session {
   ) => {
     const { stream } = event;
     this.removeStream(stream);
+  };
+  protected archiveStarted = (
+    event: OT.Event<"archiveStarted", OT.Session> & {
+      id: string;
+      name: string;
+    }
+  ) => {
+    this.callbacks.recordingStarted?.(event);
+    console.log("archive started");
+  };
+  protected archiveStopped = (
+    event: OT.Event<"archiveStopped", OT.Session> & {
+      id: string;
+      name: string;
+    }
+  ) => {
+    this.callbacks.recordingStopped?.(event);
+
+    console.log("archiveStopped ");
   };
   protected getStreamUniqueId = (stream: OT.Stream) => {
     return `${stream.connection.connectionId}-${stream.videoType}`;

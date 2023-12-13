@@ -6,18 +6,19 @@ import {
   requestMediaPermissions,
 } from "mic-check";
 
-interface IOpentokBaseInterface {
-  onDevicePermissionCheck: (
+interface IUtilityCallbackTypes {
+  onDevicePermissionCheck?: (
     error?: MediaPermissionsError,
     status?: IDevicePermissionStatusType
   ) => void;
 }
 
-class OpentokBase implements IOpentokBaseInterface {
+class SdkUtilities {
   audioDevices: OT.Device[];
   videoDevices: OT.Device[];
   devicePermissions: IDevicePermissionStatusType;
   devicePermissionError: MediaPermissionsError;
+  utilityCallbacks: IUtilityCallbackTypes = {};
 
   constructor() {
     this.getAvailableDevices();
@@ -37,10 +38,7 @@ class OpentokBase implements IOpentokBaseInterface {
   public get initialVideoDevice() {
     return this.audioDevices[0];
   }
-  onDevicePermissionCheck = (
-    error?: MediaPermissionsError | undefined,
-    status?: IDevicePermissionStatusType
-  ) => {};
+
   getDevicesWithPromise = (): Promise<{
     audio: OT.Device[];
     video: OT.Device[];
@@ -80,7 +78,11 @@ class OpentokBase implements IOpentokBaseInterface {
           mic: true,
           video: true,
         };
-        this.onDevicePermissionCheck(undefined, this.devicePermissions);
+        this.utilityCallbacks.onDevicePermissionCheck?.(
+          undefined,
+          this.devicePermissions
+        );
+        // this.onDevicePermissionCheck(undefined, this.devicePermissions);
       })
       .catch((error: MediaPermissionsError) => {
         switch (error.type) {
@@ -103,8 +105,9 @@ class OpentokBase implements IOpentokBaseInterface {
             console.log("Permission:default", error);
             break;
         }
-        this.onDevicePermissionCheck(error);
+        this.utilityCallbacks.onDevicePermissionCheck?.(error);
+        // this.onDevicePermissionCheck(error);
       });
   };
 }
-export default OpentokBase;
+export default SdkUtilities;

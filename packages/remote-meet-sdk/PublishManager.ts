@@ -1,10 +1,8 @@
-import {
-  IOpentokSessionType,
-  IOpentokStreamType,
-} from "./types/ConnectionEvent";
+import { IOpentokStreamType } from "./types/ConnectionEvent";
 import SessionManager from "./SessionManager";
 import { PUBLISHER_EVENT_NAMES } from "./constants/events-names";
 import ISDKCallbacks from "./types/ISdkCallbackTypes";
+import calculateAudioLevel from "./helpers/computeAudioLevel";
 export type PublisherType = "camera" | "screen";
 
 class PublishManager {
@@ -15,18 +13,18 @@ class PublishManager {
   initialAudioDevice: OT.Device;
   initialVideoDevice: OT.Device;
   sessionManager: SessionManager | undefined = undefined;
-  session: IOpentokSessionType | undefined = undefined;
   callbacks: ISDKCallbacks = {};
+
+  audioLevelCalculator = calculateAudioLevel();
 
   constructor(
     initialAudioDevice: OT.Device,
     initialVideoDevice: OT.Device,
-    sessionManager: SessionManager
+    sessionManager?: SessionManager
   ) {
     this.initialAudioDevice = initialAudioDevice;
     this.initialVideoDevice = initialVideoDevice;
     this.sessionManager = sessionManager;
-    this.session = sessionManager.session;
   }
   getStreamUniqueId = (stream: OT.Stream) => {
     return `${stream.connection.connectionId}-${stream.videoType}`;
@@ -40,76 +38,116 @@ class PublishManager {
   }
   private isPublished = (publisherType: PublisherType) =>
     this.publisher[publisherType];
+
   initPublisher = (
     type: PublisherType = "camera",
-    element: PublisherType = "camera"
-  ): Promise<OT.Publisher | null> => {
-    let properties: any = {
+    elementId: PublisherType = "camera"
+  ): Promise<OT.Publisher | OT.OTError> => {
+    const properties: OT.PublisherProperties = {
       name: "Publisher",
       style: { nameDisplayMode: "on" },
-      width: "280px",
-      height: "280px",
-      publishAudio: false,
-      publishVideo: false,
+      width: "100%",
+      height: "100%",
+      publishAudio: type === "camera", // Assuming default audio publishing for camera
+      publishVideo: true, // Assuming always publishing video
+      videoSource: type === "screen" ? "screen" : undefined, // If screen, set videoSource to 'screen'
+      insertMode: type === "screen" ? "append" : "append", // If screen, set insertMode to 'append'
+      audioSource:
+        type === "camera" && this.initialAudioDevice
+          ? this.initialAudioDevice.deviceId
+          : undefined,
     };
 
-    if (type === "screen") {
-      properties["videoSource"] = "screen";
-      properties["insertMode"] = "append";
-    }
-
-    if (type === "camera") {
-      if (this.initialAudioDevice)
-        properties["audioSource"] = this.initialAudioDevice.deviceId;
-    }
+    console.log("publisher called:", type);
     return new Promise((resolve, reject) => {
       this.publisher[type] = OT.initPublisher(
-        element,
+        elementId,
         properties,
         (error: OT.OTError | undefined): void => {
-          if (error) reject(this.publisher[type]);
-          resolve(this.publisher[type]);
+          if (error) {
+            reject(error);
+          }
+          // Check if publisher is initialized successfully
+          const publisher = this.publisher[type];
+          if (publisher) {
+            resolve(publisher); // Resolve the promise with the publisher
+          }
+          this.registerPublisherObjectEventsHandlers(type);
         }
       );
     });
   };
+
   publish = async (type: PublisherType = "camera") => {
     if (this.isPublished(type)) {
+      console.error(`Publisher for ${type} is already published.`);
       return;
     }
     try {
       await this.initPublisher(type, type);
       const publisherObject = this.publisher[type];
-      if (publisherObject) {
-        this.sessionManager?.session?.publish(
-          publisherObject,
-          (error: OT.OTError | undefined) => {
-            if (error) {
-              console.log(`unable to publish ${type}`, error);
-            }
-          }
-        );
-
-        this.registerEventHandlers(type);
+      if (!publisherObject) {
+        throw new Error(`Failed to initialize publisher for ${type}.`);
       }
+      await this.publishStream(publisherObject);
+      this.registerEventHandlers(type); // Assuming this method exists and handles event registration
     } catch (error) {
-      console.error("error while", error);
+      console.error(`Error while publishing ${type}:`, error);
     }
   };
-
+  private publishStream = async (
+    publisher: OT.Publisher
+  ): Promise<OT.Publisher> => {
+    return new Promise((resolve, reject) => {
+      this.sessionManager?.session?.publish(
+        publisher,
+        (error: OT.OTError | undefined) => {
+          if (error) {
+            publisher.destroy();
+            return reject(error);
+          }
+          return resolve(publisher);
+        }
+      );
+    });
+  };
   unpublish = (publisherType: PublisherType) => {
     const p = this.publisher[publisherType];
     if (this.publisher && p) {
-      this.session?.unpublish(p);
+      this.sessionManager?.session?.unpublish(p);
       this.publisher[publisherType] = null;
     }
   };
 
+  destroy = (type: PublisherType) => {
+    this.publisher[type]?.destroy();
+    this.publisher[type]?.off("destroyed", this.elementRemoved);
+
+    this.publisher[type] = null;
+  };
+
+  private registerPublisherObjectEventsHandlers = (type: PublisherType) => {
+    this.publisher[type]?.on("destroyed", this.elementRemoved);
+  };
   private registerEventHandlers(type: PublisherType) {
     this.publisher[type]?.on("streamCreated", this.streamCreated);
     this.publisher[type]?.on("streamDestroyed", this.streamDestroyed);
+    if (type === "camera") {
+      this.publisher.camera?.on("audioLevelUpdated", this.audioLevelUpdated);
+    }
   }
 
+  private elementRemoved = (event: OT.Event<"destroyed", OT.Publisher>) => {
+    this.callbacks.publisherElementRemoved?.(event);
+  };
+
+  private audioLevelUpdated = (
+    event: OT.Event<"audioLevelUpdated", OT.Publisher> & { audioLevel: number }
+  ) => {
+    const audioLevel = this.audioLevelCalculator(event.audioLevel);
+    this.callbacks.audioLevelUpdate?.(audioLevel);
+    // console.log("audio level updated", `${audioLevel}%`);
+  };
   /**
    *
    * @description Remove all session event listeners

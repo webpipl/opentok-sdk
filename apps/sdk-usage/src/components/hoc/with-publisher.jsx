@@ -1,22 +1,23 @@
-"use client";
 import { useEffect, useRef, useState } from "react";
-const { OpentokClientSDK } = require("remote-meet-sdk");
+import { PublishManager } from "remote-meet-sdk";
 
-const withOpentokHOC = (Component) => {
+const withPublisher = (Component) => {
   return (props) => {
     const [opentok, setOpentok] = useState(null);
     const opentokRef = useRef(null);
     useEffect(() => {
       if (opentok === null) {
-        let instance = new OpentokClientSDK();
+        let instance = new PublishManager();
         setOpentok(instance);
         opentokRef.current = instance;
       }
     }, []);
     useEffect(() => {
       return () => {
+        console.log("opentokRef.current:0", opentokRef.current);
         if (opentokRef.current) {
-          opentokRef.current?.disconnect();
+          opentokRef.current.destroy();
+          // opentokRef.current?.disconnect();
         }
       };
     }, []);
@@ -24,4 +25,5 @@ const withOpentokHOC = (Component) => {
     return <Component children={props.children} opentok={opentok} />;
   };
 };
-export default withOpentokHOC;
+
+export default withPublisher;

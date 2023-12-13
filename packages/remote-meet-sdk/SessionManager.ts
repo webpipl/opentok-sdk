@@ -44,20 +44,21 @@ class SessionManager extends Session {
     apiKey: string,
     sessionId: string,
     token: string
-  ): Promise<IOpentokSessionType> => {
+  ): Promise<IOpentokSessionType | OT.OTError> => {
     this.session = this.intializeSession(apiKey, sessionId);
-    const promise: Promise<IOpentokSessionType> = new Promise(
+    const promise: Promise<IOpentokSessionType | OT.OTError> = new Promise(
       (resolve, reject) => {
         this.session?.connect(token, (error?: OT.OTError) => {
           if (error) {
             this.status = ConnectionStatus.Failed;
+            return reject(error as OT.OTError);
           }
           this.status = ConnectionStatus.Connected;
           this.mutateSessionData();
           this.peerConnection = new PeerConnection(this.session, this.status);
           this.registerPeerConnectionCallbacks();
           this.callbacks.sessionConnectedCallback?.(this.session);
-          resolve(this.session as IOpentokSessionType);
+          return resolve(this.session as IOpentokSessionType);
         });
       }
     );
@@ -79,43 +80,43 @@ class SessionManager extends Session {
     });
   };
 
+  // Subscribe to given stream
   subscribe = (
     stream: OT.Stream,
     element: HTMLElement,
     properties: OT.SubscriberProperties,
     name: string
-  ): Promise<OT.Subscriber | OT.OTError | undefined> => {
-    if (!this.streams.get(this.getStreamUniqueId(stream))) {
-      return Promise.resolve(undefined);
+  ): Promise<OT.Subscriber> => {
+    if (!this.streams.has(this.getStreamUniqueId(stream))) {
+      console.error("Stream not found");
+      return Promise.reject(new Error("Stream not found"));
     }
-    const data = stream.connection.data;
-    properties = {
-      width: "280px",
-      height: "280px",
+
+    const extendedProperties: OT.SubscriberProperties = {
+      ...properties,
+      width: "100%",
+      height: "100%",
       insertMode: "append",
-      name: data?.name || name,
+      name: stream.connection.data?.name ?? name,
     };
-    let _self = this;
+
     return new Promise((resolve, reject) => {
       const subscriber = this.session?.subscribe(
         stream,
         element,
-        properties,
-        (error?: OT.OTError | undefined) => {
+        extendedProperties,
+        (error) => {
           if (error) {
-            console.log("unable to subscribe");
-            reject(error);
+            console.error("Unable to subscribe:", error);
+            return reject(error);
           }
-
-          if (subscriber) {
-            this.subscribers.set(_self.getStreamUniqueId(stream), subscriber);
-            resolve(subscriber);
+          if (!subscriber) {
+            return reject(new Error("Failed to create subscriber"));
           }
+          this.subscribers.set(this.getStreamUniqueId(stream), subscriber);
+          resolve(subscriber);
         }
       );
-      subscriber?.on("destroyed", () => {
-        console.log("subscriber destroyed");
-      });
     });
   };
 

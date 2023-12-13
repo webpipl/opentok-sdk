@@ -14,3 +14,7 @@ npx create-turbo@latest
 
 - `web Usage`: another [Usage of Opentok SDK](https://github.com/webpipl/opentok-sdk/tree/publisher-refactoring/apps/web) Usage
 - `Opentok SDK Library`: another [OpentokSDK](https://github.com/webpipl/opentok-sdk/tree/publisher-refactoring/packages/opentok-client-sdk) SDK
+
+## add another app to workspace
+
+npm create vite@4.0.0 sdk-usage

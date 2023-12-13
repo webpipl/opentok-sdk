@@ -1,11 +1,11 @@
 "use client";
 import SessionManager from "./SessionManager";
 import PublishManager, { PublisherType } from "./PublishManager";
-import OpentokBase from "./OpentokBase";
 import { IJoinRequestType } from "./IOpentokActionsListener";
 import ISDKCallbacks from "./types/ISdkCallbackTypes";
+import SdkUtilities from "./SdkUtilities";
 
-class OpentokClientSDK extends OpentokBase {
+class OpentokClientSDK extends SdkUtilities {
   capturedSnapshot: string | null | undefined;
   publishManager: PublishManager;
   sessionManager: SessionManager = new SessionManager();
@@ -29,16 +29,46 @@ class OpentokClientSDK extends OpentokBase {
   connect = async (apiKey: string, sessionId: string, token: string) => {
     try {
       await this.sessionManager.connect(apiKey, sessionId, token);
-    } catch (eroror) {}
+    } catch (error) {
+      this.callbacks.throwError?.(error as OT.OTError);
+      console.log("error connecting to session:", error);
+    }
   };
-  publish = (type: PublisherType) => {
-    this.publishManager.publish(type);
+  publish = async (type: PublisherType) => {
+    try {
+      await this.publishManager.publish(type);
+    } catch (error) {
+      console.log("error publish:", error);
+    }
+  };
+  getPublishedCamera = () => {
+    this.publishManager.publisher.camera;
+  };
+  getPublishedScreen = () => {
+    this.publishManager.publisher.screen;
+  };
+  subscribe = (
+    stream: OT.Stream,
+    element: HTMLElement,
+    properties: OT.SubscriberProperties,
+    name: string
+  ) => {
+    return this.sessionManager.subscribe(stream, element, properties, name);
   };
 
   disconnect = async () => {
     this.sessionManager.disconnect();
   };
 
+  getSession = () => {
+    return this.sessionManager.session;
+  };
+  getStreams = () => {
+    return this.sessionManager.streams;
+  };
+  getStatus = () => {
+    return this.sessionManager.status;
+  };
   shareScreen = () => {
     if (!this.publishManager.publisher.screen) {
       this.publishManager.publish("screen");

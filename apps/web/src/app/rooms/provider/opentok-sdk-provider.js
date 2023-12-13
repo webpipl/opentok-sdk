@@ -9,15 +9,16 @@ function OpenttokSDKProvider({ children, opentok }) {
   const [connections, setConnections] = useState(
     opentok?.sessionManager?.getConnections()
   );
-  const [status, setStatus] = useState(opentok?.sessionManager?.status);
-  const [streams, setStreams] = useState(opentok?.sessionManager?.streams);
-  const [session, setSession] = useState(opentok?.sessionManager?.session);
+  const [status, setStatus] = useState(opentok?.getStatus());
+  const [streams, setStreams] = useState(opentok?.getStreams());
+  const [session, setSession] = useState(opentok?.getSession());
   const [muted, setMuted] = useState({ audio: false, video: false });
   const [snapshot, setSnapshot] = useState(undefined);
   const [publisher, setPublisher] = useState({
-    camera: opentok.publishManager?.publisher.camera,
-    screen: opentok?.publishManager?.publisher.screen,
+    camera: opentok.getPublishedCamera(),
+    screen: opentok?.getPublishedScreen(),
   });
+
   const [showPermissionRequestStrip, setPermissionRequestStrip] =
     useState(undefined);
 
@@ -82,10 +83,8 @@ function OpenttokSDKProvider({ children, opentok }) {
       }));
     };
 
-    opentok.sessionManager.callbacks.myCustomCallback = (data) => {
-      console.log("calllback methods called");
-    };
     opentok.callbacks.sessionConnectedCallback = (data) => {
+      console.log("session connected");
       setSession(data);
     };
 
@@ -95,11 +94,11 @@ function OpenttokSDKProvider({ children, opentok }) {
 
     opentok.callbacks.addConnectionCallback = (data) => {
       setConnections(new Map(data));
-      monitorSessionForInactivityToDisconnect(data);
+      // monitorSessionForInactivityToDisconnect(data);
     };
     opentok.callbacks.removeConnectionCallback = (data) => {
       setConnections(new Map(data));
-      monitorSessionForInactivityToDisconnect(data);
+      // monitorSessionForInactivityToDisconnect(data);
     };
 
     opentok.callbacks.listenSessionStatus = (data) => {
@@ -124,7 +123,10 @@ function OpenttokSDKProvider({ children, opentok }) {
       setPublisher(data);
     };
 
-    opentok.onDevicePermissionCheck = (error, permissionStatus) => {
+    opentok.utilityCallbacks.onDevicePermissionCheck = (
+      error,
+      permissionStatus
+    ) => {
       if (error) {
         setDevicePermissionError(error);
         return;
@@ -201,11 +203,11 @@ function OpenttokSDKProvider({ children, opentok }) {
       ),
     [streams, session]
   );
+
   return (
     <OpentokSDKContext.Provider
       value={{
         opentok,
-
         status: status,
         streams: streams,
         session: session,
